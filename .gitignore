@@ -1,0 +1,10 @@
+/Build
+/Library
+/Logs
+/obj
+/Temp
+/.vs
+/UserSettings
+/.vsconfig
+/Assembly-CSharp.csproj
+/Timeless.sln
