@@ -1,8 +1,10 @@
 // Lookup-based algorithm: “Fast Half Float Conversions” by Jeroen van der Zijp - November 2008
 using System.Runtime.InteropServices;
 
-namespace MassiveNet {
-    internal static class HalfConverter {
+namespace MassiveNet
+{
+    internal static class HalfConverter
+    {
         static readonly uint[] ToFloatMantissa = new uint[2048];
         static readonly uint[] ToFloatExponent = new uint[64];
         static readonly uint[] ToFloatOffset = new uint[64];
@@ -11,7 +13,8 @@ namespace MassiveNet {
         static readonly byte[] ToHalfShift = new byte[512];
 
         [StructLayout(LayoutKind.Explicit)]
-        struct FloatToUint {
+        struct FloatToUint
+        {
             [FieldOffset(0)]
             public uint uintValue;
 
@@ -19,25 +22,32 @@ namespace MassiveNet {
             public float floatValue;
         }
 
-        static HalfConverter() {
+        static HalfConverter()
+        {
             GenerateToFloat();
             GenerateToHalf();
         }
 
-        /// <summary> Populates tables for half to float conversion lookups. </summary>
-        private static void GenerateToFloat() {
+        /// <summary>
+        /// Populates tables for half to float conversion lookups. 
+        /// </summary>
+        private static void GenerateToFloat()
+        {
             PopulateMantissaTable();
             PopulateExponentTable();
             PopulateOffsetTable();
         }
 
-        private static void PopulateMantissaTable() {
+        private static void PopulateMantissaTable()
+        {
             ToFloatMantissa[0] = 0;
-            for (int i = 1; i < 1024; i++) {
+            for (int i = 1; i < 1024; i++)
+            {
                 uint m = ((uint)i) << 13;
                 uint e = 0;
 
-                while ((m & 0x00800000) == 0) {
+                while ((m & 0x00800000) == 0)
+                {
                     e -= 0x00800000;
                     m <<= 1;
                 }
@@ -47,14 +57,17 @@ namespace MassiveNet {
                 ToFloatMantissa[i] = m | e;
             }
 
-            for (int i = 1024; i < 2048; i++) {
+            for (int i = 1024; i < 2048; i++)
+            {
                 ToFloatMantissa[i] = 0x38000000 + (((uint)(i - 1024)) << 13);
             }
         }
 
-        private static void PopulateExponentTable() {
+        private static void PopulateExponentTable()
+        {
             ToFloatExponent[0] = 0;
-            for (int i = 1; i < 63; i++) {
+            for (int i = 1; i < 63; i++)
+            {
                 // Positive:
                 if (i < 31) ToFloatExponent[i] = ((uint)i) << 23;
                 // Negative:
@@ -65,15 +78,23 @@ namespace MassiveNet {
             ToFloatExponent[63] = 0xC7800000;
         }
 
-        private static void PopulateOffsetTable() {
+        private static void PopulateOffsetTable()
+        {
             ToFloatOffset[0] = 0;
-            for (int i = 1; i < 64; i++) ToFloatOffset[i] = 1024;
+            for (int i = 1; i < 64; i++)
+            {
+                ToFloatOffset[i] = 1024;
+            }
             ToFloatOffset[32] = 0;
         }
 
-        /// <summary> Populates tables for float to half conversion. </summary>
-        private static void GenerateToHalf() {
-            for (int i = 0; i < 256; i++) {
+        /// <summary> 
+        /// Populates tables for float to half conversion.
+        /// </summary>
+        private static void GenerateToHalf()
+        {
+            for (int i = 0; i < 256; i++)
+            {
                 int e = i - 127;
                 if (e < -24) MapToZero(i);
                 else if (e < -14) MapToDenorm(i, e);
@@ -83,7 +104,8 @@ namespace MassiveNet {
             }
         }
 
-        private static void MapToZero(int i) {
+        private static void MapToZero(int i)
+        {
             // Too-small numbers map to zero:
             ToHalfBase[i | 0x000] = 0x0000;
             ToHalfBase[i | 0x100] = 0x8000;
@@ -91,7 +113,8 @@ namespace MassiveNet {
             ToHalfShift[i | 0x100] = 24;
         }
 
-        private static void MapToDenorm(int i, int e) {
+        private static void MapToDenorm(int i, int e)
+        {
             // Very small numbers become denorms:
             ToHalfBase[i | 0x000] = (ushort)((0x0400 >> (-e - 14)));
             ToHalfBase[i | 0x100] = (ushort)((0x0400 >> (-e - 14)) | 0x8000);
@@ -99,7 +122,8 @@ namespace MassiveNet {
             ToHalfShift[i | 0x100] = (byte)(-e - 1);
         }
 
-        private static void MapToPrecisionLoss(int i, int e) {
+        private static void MapToPrecisionLoss(int i, int e)
+        {
             // Normal range numbers lose precision:
             ToHalfBase[i | 0x000] = (ushort)(((e + 15) << 10));
             ToHalfBase[i | 0x100] = (ushort)(((e + 15) << 10) | 0x8000);
@@ -107,7 +131,8 @@ namespace MassiveNet {
             ToHalfShift[i | 0x100] = 13;
         }
 
-        private static void MapToInfinity(int i) {
+        private static void MapToInfinity(int i)
+        {
             // Too-large numbers == infinity:
             ToHalfBase[i | 0x000] = 0x7C00;
             ToHalfBase[i | 0x100] = 0xFC00;
@@ -115,7 +140,8 @@ namespace MassiveNet {
             ToHalfShift[i | 0x100] = 24;
         }
 
-        private static void MapForNaN(int i) {
+        private static void MapForNaN(int i)
+        {
             // Infinity and NaN keep their value:
             ToHalfBase[i | 0x000] = 0x7C00;
             ToHalfBase[i | 0x100] = 0xFC00;
@@ -123,13 +149,15 @@ namespace MassiveNet {
             ToHalfShift[i | 0x100] = 13;
         }
 
-        public static float HalfToFloat(ushort value) {
+        public static float HalfToFloat(ushort value)
+        {
             var conv = new FloatToUint();
             conv.uintValue = ToFloatMantissa[ToFloatOffset[value >> 10] + (((uint)value) & 0x3ff)] + ToFloatExponent[value >> 10];
             return conv.floatValue;
         }
 
-        public static ushort FloatToHalf(float value) {
+        public static ushort FloatToHalf(float value)
+        {
             var conv = new FloatToUint();
             conv.floatValue = value;
             return (ushort)(ToHalfBase[(conv.uintValue >> 23) & 0x1ff] + ((conv.uintValue & 0x007fffff) >> ToHalfShift[(conv.uintValue >> 23) & 0x1ff]));
